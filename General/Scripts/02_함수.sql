@@ -434,6 +434,357 @@ SELECT
 FROM DUAL;
 
 
+/* NULL : 값이 없음(빈 칸)
+ * 
+ * NULL 처리 연산 : IS NULL, IS NOT NULL
+ * 
+ * *** NULL 처리 함수 ***
+ * 
+ * * NVL(컬럼명, 컬럼 값이 NULL인 경우 변경할 값)
+ * -> NULL인 경우 다른 값으로 변경
+ * 
+ * * NVL2(컬럼명,NULL이 아닌 경우, NULL인 경우)
+ * -> NULL인 경우, 아닌 경우를 나눠서 처리
+ */
+
+-- EMPLOYEE 테이블에서
+-- 사번, 이름, 전화번호 조회
+-- 단, 전화번호가 없으면(NULL) '없음'으로 조회
+SELECT 
+	EMP_ID ,EMP_NAME ,NVL(PHONE,'없음') AS PHONE
+FROM 
+	EMPLOYEE ;
+
+
+-- EMPLOYEE 테이블에서
+-- 이름, 급여, 보너스, 급여*보너스 조회
+-- 단, 보너스가 없는 사원은 0으로 조회
+/* NULL과 산술 연산 수행 시 결과는 무조건 NULL!! */
+SELECT 
+	EMP_ID ,SALARY ,NVL(BONUS,0) AS BONUS ,NVL(SALARY*BONUS,0) AS "BONUS*SALARY"
+FROM 
+	EMPLOYEE ;
+
+
+-- EMPLOYEE 테이블에서
+-- 사번, 이름, 전화번호 조회
+-- 단, 전화번호가 없으면 '없음'
+-- 전화번호가 있으면 '010********' 형식으로 변경해서 조회
+SELECT 
+	EMP_ID ,
+	EMP_NAME ,
+	NVL2(PHONE,RPAD(SUBSTR(PHONE,1,3),LENGTH(PHONE),'*') ,'없음') AS PHONE 
+FROM
+	EMPLOYEE;
+-- RPAD(문자열,길이,바꿀문자)
+--> 문자열 전체에서 오른쪽을 지정된 길이 만큼 바꿀문자로 변경
+
+-----------------------------------------------------------------
+
+
+/* 선택 함수 
+ * - 여러 가지 경우에 따라 알맞은 결과를 선택하는 함수
+ * (IF, SWITCH 비슷)
+ * */
+
+/* DECODE(컬럼명, 조건1, 결과1, 조건2, 결과2...[,아무것도 만족 x])
+ * 
+ * - 컬럼값이 일치하는 조건이 있으면
+ * 	 해당 조건 오른쪽에 작성된 겷과가 반환되는 함수
+ * 
+ * - SWTICH, CASE, DEFAULT와 비슷
+ */
+
+-- EMPLOYEE 테이블에서
+-- 모든 사원의 이름, 주민등록번호, 성별 조회
+SELECT 
+	EMP_NAME,
+	EMP_NO,
+	DECODE(SUBSTR(EMP_NO,8,1),1,'남자',2,'여자') AS 성별
+FROM
+	EMPLOYEE ;
+
+
+-- EMPLOYEE 테이블에서
+-- 직급코드가 'J7'인 사원의 급여를 기존 급여를 20%인상
+-- 직급코드가 'J6'인 사원의 급여를 기존 급여를 15%인상
+-- 직급코드가 'J5'인 사원의 급여를 기존 급여를 10%인상
+-- 나머지 사원은 5% 인상
+-- 사원명, 직급코드, 기존 급여, 인상된 급여 조회
+-- 직급 코드 오름 차순으로 조회
+SELECT 
+	EMP_NAME ,
+	DEPT_CODE ,
+	SALARY AS "기존급여",
+	DECODE(
+		JOB_CODE ,
+		'J7',SALARY*1.2,
+		'J6',SALARY*1.15,
+		'J5',SALARY*1.1,
+		SALARY*1.05
+		
+	) AS "인상된 급여"
+FROM 	
+	EMPLOYEE 
+ORDER BY
+	DEPT_CODE ASC;
+
+
+/* CASE
+ * 	WHEN 조건1 THEN 결과1
+ * 	WHEN 조건2 THEN 결과2
+ * 	WHEN 조건3 THEN 결과3
+ * 	...
+ * 	ELSE 나머지 결과
+ * END
+ * 
+ * -- IF, ELSE -IF , ELSE와 비슷
+ * 
+ * - CASE 함수의 작성되는 조건은 범위로 설정이 가능하다!!
+ * (DECODE는 딱 떨어지는 값만 조건으로 설정 가능)  
+ */
+
+
+
+-- EMPLOYEE 테이블에서
+-- 사번, 이름, 급여, 구분을 조회
+-- 구분은 받는 급여에 따라 초급, 중급, 고급으로 나눔
+-- 급여 600만 이상 -> 고급
+-- 급여 400만 이상 600만 미만 -> 중급
+-- 급여 400만 미만 -> 초급
+-- 단, 부서코드가 'D6','D9'인 사원만, 부서코드 오름차순으로 조회
+-- 부서코드 오름차순으로 조회
+SELECT 
+	EMP_ID 사번,
+	EMP_NAME 이름,
+	SALARY 급여,
+	CASE 
+		WHEN SALARY>=6000000 THEN '고급'
+		WHEN SALARY>=4000000 THEN '중급'
+		ELSE '초급'
+	END AS 구분
+FROM 
+	EMPLOYEE
+WHERE 
+	DEPT_CODE IN('D6','D9')
+ORDER BY
+	DEPT_CODE ASC;
+
+
+
+-- EMPLOYEE 테이블에서
+-- 이름, 연봉, 세금(연봉 * 세율) 조회
+-- 세금 내림 차순으로 조회하기
+SELECT 
+	EMP_NAME ,
+	SALARY *12 AS 연봉,
+	CASE 
+		WHEN SALARY*12 <= 12000000 THEN SALARY*12*0.06 
+		WHEN SALARY*12 <= 46000000 THEN SALARY*12*0.15 
+		WHEN SALARY*12 <= 88000000 THEN SALARY*12*0.24 
+		WHEN SALARY*12 <= 150000000 THEN SALARY*12*0.35 
+	END AS 세금
+FROM 
+	EMPLOYEE 
+ORDER BY
+	세금 DESC ;
+
+
+
+----------------------------------------------------------
+
+/* 그룹 함수 */
+
+/*- N개 행의 컬럼 값을 함수로 전달하였을 때
+ * 	결과가 1개만 반환되는 함수 
+ *
+ * (참고) 그룹 수가 늘어나면 그룹 함수 결과 개수도 증가!
+ * 	-> GROUP BY 
+ * */
+
+/* SUM(컬럼명) : 그룹의 컬럼 값 합계를 반환하는 함수 
+ * -> 숫자가 작성된 컬럼에만 사용 가능!
+ * */
+
+-- 모든 사원의 급여 합 조회 
+SELECT 
+	SUM(SALARY) AS 합계
+FROM
+	EMPLOYEE ;
+
+
+-- 부서코드가 'D6'인 사원의 급여 합을 조회
+SELECT
+	SUM(SALARY) AS 합계
+FROM
+	EMPLOYEE 
+WHERE 
+	DEPT_CODE='D6';
+
+
+----------------------------------------------------------------
+
+/* AVG(컬럼명) : 그룹의 평균을 반환하는 함수 */
+-- 모든 사원의 급여 평균 조회
+SELECT 
+	FLOOR(AVG(SALARY)) AS "급여 평균"
+FROM
+	EMPLOYEE ;
+
+-- 모든 사원의 급여 평균 보다 
+-- 많이 받는 사원의
+-- 이름, 급여 내림차순 조회
+SELECT 	
+	EMP_NAME ,
+	SALARY 
+FROM 
+	EMPLOYEE 
+WHERE
+	SALARY > (SELECT AVG(SALARY) FROM EMPLOYEE) -- 서브쿼리
+ORDER BY
+	SALARY DESC;
+-- 일반적으로 일반 컬럼 + 그룹함수 결과를 혼용 사용 불가
+--> GROUP BY OR 서브쿼리 이용
+
+
+-------------------------------------------------------------------
+
+/* MAX(컬럼명), MIN(컬럼명) : 최대,최소값 반환 */
+
+-- 부서코드가 'D6'인 사원 중
+-- 제일 높은 급여, 제일 낮은 급여 조회
+SELECT 
+	MAX(SALARY), MIN(SALARY)
+FROM 	
+	EMPLOYEE 
+WHERE 
+	DEPT_CODE = 'D6';
+
+
+-- 모든 사원 중 이름순으로 오름 차순 정렬 했을 때
+-- 첫 번째 사원, 마지막 사원의 이름 조회
+-- (문자열 대소 비교 : 유니코드 순서 A < Z, ㄱ < ㅎ) 
+SELECT 
+	MIN(EMP_NAME),MAX(EMP_NAME)
+FROM 
+	EMPLOYEE; 
+
+
+-- 모든 사원 중 입사일이 가장 빠른 사원, 늦은 사원의 입사일 조회
+-- 날짜 대소 비교 : 과거 < 미래
+SELECT 
+	MIN(HIRE_DATE), MAX(HIRE_DATE)
+FROM 
+	EMPLOYEE;
+
+
+----------------------------------------------------------------------
+
+/* COUNT() : 조회된 행의 개수를 반환하는 함수 
+ * 
+ * 1) COUNT(*)
+ * - 조회된 모든 행의 개수를 반환
+ * 	 (NULL이 포함된 행도 개수 증가)
+ * 
+ * 2) COUNT(컬럼명)
+ * - 지정된 컬럼 값이 NULL인 행을 제외하고 
+ * 	 나머지 행의 개수를 반환
+ * 
+ * 3) COUNT(DISTINCT 컬럼명)
+ * - 컬럼값이 중복되는 경우를 제외하고 행의 개수를 반환
+ * 	 (중복은 한 번만 카운트)
+ * */
+
+-- EMPLOYEE 테이블의 모든 행의 개수 조회
+SELECT COUNT(*) FROM EMPLOYEE ;
+
+-- EMPLOYEE 테이블에서
+-- 부서코드가 'D5','D6'인 사원의 수 조회
+SELECT 
+	COUNT(*)
+FROM 
+	EMPLOYEE 
+WHERE 
+	DEPT_CODE IN ('D5','D6');
+
+-- 전화번호가 있는 사원의 수 조회(방법 1)
+SELECT 
+	COUNT(*)  -- NULL 포함 모든 개수 조회
+FROM 	
+	EMPLOYEE 
+WHERE 
+	PHONE IS NOT NULL;
+
+
+-- 전화번호가 있는 사원의 수 조회(방법 2)
+SELECT 
+	COUNT(PHONE) -- NULL제외한 모든 개수 조회
+FROM 	
+	EMPLOYEE ;
+
+
+-- EMPLOYEE 테이블에 존재하는 부서코드의 수 조회
+-- (몇 종류의 부서코드가 존재하는지 확인)
+SELECT 
+	COUNT(DISTINCT DEPT_CODE) -- NULL 제외하고 중복없이 모든 개수 조회
+FROM
+	EMPLOYEE ;
+
+
+-- EMPLOYEE 테이블에 존재하는
+-- 여자, 남자 사원 수 조회
+
+/* [결과]
+ *   		여자		남자
+ * 1행   7			 16
+ * 
+ */
+
+SELECT 
+	COUNT(DECODE(SUBSTR(EMP_NO,8,1),'1','남자')) AS 남자,
+	COUNT(DECODE(SUBSTR(EMP_NO,8,1),'2','여자')) AS 여자
+FROM 
+	EMPLOYEE ;
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
